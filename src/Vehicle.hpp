@@ -21,7 +21,7 @@ public:
     int index;
     int time;
     int location = 0;
-    std::list<Direction> directions;
+    std::vector<Direction> directions;
     std::vector<int> roads;
     Vehicle(int time) : time(time) {}
     std::vector<Statistics> stats;
@@ -29,11 +29,12 @@ public:
 
     void start_road(int t, int lane_index){
         Statistics stat;
-        stat.road = roads[roadIndex++];
+        stat.road = roads[roadIndex];
         stat.start_time=t;
         stat.lane=lane_index;
-        directions.pop_front();
+        //directions.pop_front();
         stats.push_back(stat);
+        roadIndex++;
     }
 
     void enqueue(int t){

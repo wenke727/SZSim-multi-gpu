@@ -30,7 +30,6 @@ void initialize_roads(Model* model, json j)
             Lane *lane = new Lane(lane_index++, index_in_road++, length, index, (int)(length / model->car_actual_length), (*it_lane)["direction"].get<int>(),(*it_lane)["ht"].get<int>());
             for (json::iterator it_s = (*it_lane)["signals"].begin(); it_s != (*it_lane)["signals"].end(); ++it_s)
                 lane->signals.push_back((*it_s).get<int>());
-            lane->signals[1] += lane->signals[0];
             model->lanes.push_back(lane);
             road->lanes.push_back(lane);
         }
@@ -143,7 +142,7 @@ void Model::release_vehicles(Lane *lane, int t)
     if (lane->cool_down==0 && lane->can_pass && !lane->queue.empty())
     {
         Vehicle *v = lane->queue.front();
-        if (v->roadIndex == v->roads.size())
+        if (v->roadIndex >= v->roads.size())
         {
             lane->pop_queue_front();
             lane->reset_cool_down();
@@ -151,7 +150,7 @@ void Model::release_vehicles(Lane *lane, int t)
         }
         else
         {
-            std::vector<Lane *> lanes = roads[v->roads[v->roadIndex]]->lanes_per_direction[v->directions.front()];
+            std::vector<Lane *> lanes = roads[v->roads[v->roadIndex]]->lanes_per_direction[v->directions[v->roadIndex]];
             Lane *min_lane = nullptr;
             int min = 99999;
             for (int i = 0; i < lanes.size(); i++)
@@ -180,7 +179,7 @@ void Model::load_input_vehicles(Road *road, int t)
     {
         Vehicle *v = *(road->vehicle_load_itr);
         road->vehicle_load_itr++;
-        std::vector<Lane *> lanes = road->lanes_per_direction[v->directions.front()];
+        std::vector<Lane *> lanes = road->lanes_per_direction[v->directions[v->roadIndex]];
         
         Lane *min_lane = nullptr;
         int min = 99999;

@@ -99,6 +99,8 @@ def get_tripdata(tripdata_path):  ##
             data[i][2]=[data[i][2]]
             data[i][3]=[data[i][3]]
         data[i].append(0)  ##
+        if len(data[i][2]) != len(data[i][3]):
+            print("Error: Vehicle "+str(data[i][0])+" has inequal road and direction")
     return data
 
 ##
@@ -159,7 +161,7 @@ def get_road(roadname_list,trip_data,signal_plan,roaddata_path):
         reader = csv.reader(csv_file)
         data = [row[:] for row in reader]
         del data[0]
-    Road=[]
+    Road=[v for v in roadname_list]
     for i in range(len(roadname_list)):   ##
         res=get_roaddata(roadname_list[i],data)
         ssa=[]
@@ -231,11 +233,12 @@ def get_road(roadname_list,trip_data,signal_plan,roaddata_path):
                 temp.append(pass_time)  ##
             t.append(temp)
         LANE.append(t)
-        for j in range(len(trip_data)):
-            if trip_data[j][2][0]==roadname_list[i]:
-                LANE[2].append(trip_data[j])
         LANE.append([cdz_name,ht])
-        Road.append(LANE)
+        index = roadname_list.index(LANE[0])
+        Road[index] = LANE
+    for j in range(len(trip_data)):
+        index = roadname_list.index(trip_data[j][2][0])
+        Road[index][2].append(trip_data[j])
     return Road
 
 directions_list = ['左', '右', '直','左直','直右', '左右', '左直右'] ##
@@ -244,6 +247,8 @@ import json
 def vehicleToJson(v):
     time = int((v[1]-stime).total_seconds())
     roads=[]
+    if len(v[2]) != len(v[3]):
+        print("Error: Vehicle "+str(v[0])+" has inequal road and direction")
     for r in v[2]:
         roads.append(roadname_list.index(r))
     directions = []
