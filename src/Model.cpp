@@ -30,6 +30,7 @@ void initialize_roads(Model* model, json j)
             Lane *lane = new Lane(lane_index++, index_in_road++, length, index, (int)(length / model->car_actual_length), (*it_lane)["direction"].get<int>(),(*it_lane)["ht"].get<int>());
             for (json::iterator it_s = (*it_lane)["signals"].begin(); it_s != (*it_lane)["signals"].end(); ++it_s)
                 lane->signals.push_back((*it_s).get<int>());
+            lane->signals[1] += lane->signals[0];
             model->lanes.push_back(lane);
             road->lanes.push_back(lane);
         }
@@ -274,7 +275,6 @@ void Model::loop()
     }
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();  
     std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
-    // std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::seconds>(end - begin).count() << "[s]" << std::endl;
 
     return;
 

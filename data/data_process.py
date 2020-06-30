@@ -6,34 +6,25 @@ import copy
 import random
 import math
 import csv
-import pandas as pd
+
 #基本设定
 car_len = 5  #车身长度
 hs = 0.6     #停车间距
 jam_density=1000/(car_len+hs)  #阻塞密度
 free_speed=60  #畅行速度
 
-# tripdata_path='./data/trip_data.csv'
-# roaddata_path='./data/road_data.csv'
-# signaldata_path='./data/signal_data.csv'
-
-# futian data path
-tripdata_path='/home/pcl/data/simulation/trip_data.csv'
-roaddata_path='/home/pcl/data/simulation/road_data.csv'
-signaldata_path='/home/pcl/data/simulation/signal_data.csv'
-
-SPLIT_ = '->'
-
 # 示例路网所包含有向路段ID
-# roadname_list=['40014002', '40024001', '40024003', '40034002', '40014004', '40044001', '40024005', '40054002', '40034006', '40064003', '40044005', '40054004', '40064005', '40054006', '40044007', '40074004', '40054008', '40084005', '40064009', '40094006', '40074008', '40084007', '40084009', '40094008']
-roadname_list = list( pd.read_csv(roaddata_path)['FNODE&TNODE'].astype(str).unique())
-print(f'roadname_list: {roadname_list}')
+roadname_list=['40014002', '40024001', '40024003', '40034002', '40014004', '40044001', '40024005', '40054002', '40034006', '40064003', '40044005', '40054004', '40064005', '40054006', '40044007', '40074004', '40054008', '40084005', '40064009', '40094006', '40074008', '40084007', '40084009', '40094008']
 
 stime = datetime.datetime(1900, 1, 1, 17, 0, 0)  #开始时间
 etime= datetime.datetime(1900, 1, 1, 17, 15, 0)   #结束时间
 prestime=stime-datetime.timedelta(minutes=0)    #预热时间
 ab=[[1,1] for x in range(len(roadname_list))]  #路段速密函数中的ab值，默认为[1,1]
 
+
+tripdata_path='.\\trip_data.csv'
+roaddata_path='.\\road_data.csv'
+signaldata_path='.\\signal_data.csv'
 
 #车辆搜寻目标车道
 def comom_num(a,b):
@@ -78,7 +69,6 @@ def get_roaddata(roadname,roaddata):
     roaddata = one
     return roaddata
 
-
 #获取需求数据   车辆需求list——[车牌，路径各路口时间，路径各路段集合，各路段车道组集合，距离当前路段停车线距离]
 def get_tripdata(tripdata_path):  #车辆路径数据
     with open(tripdata_path)as csv_file:
@@ -90,16 +80,15 @@ def get_tripdata(tripdata_path):  #车辆路径数据
             data[i][1]=data[i][1][:8]   #去除毫秒
         data[i][1]=datetime.datetime.strptime(data[i][1], r"%H:%M:%S")
         #以列表组织路径数据
-        if SPLIT_ in data[i][2]:
-            data[i][2]=data[i][2].split(SPLIT_)
-        if SPLIT_ in data[i][3]:
-            data[i][3]=data[i][3].split(SPLIT_)
+        if '-' in data[i][2]:
+            data[i][2]=data[i][2].split('-')
+        if '-' in data[i][3]:
+            data[i][3]=data[i][3].split('-')
         if isinstance(data[i][2],str)==True:
             data[i][2]=[data[i][2]]
             data[i][3]=[data[i][3]]
         data[i].append(0)  #车辆当前距离停车线距离
     return data
-
 
 #获取信控方案
 def get_sigalplan(signaldata_path,prestime,etime):
@@ -112,46 +101,21 @@ def get_sigalplan(signaldata_path,prestime,etime):
         one[i][5]=int(one[i][5])
         one[i][6] = int(one[i][6])
         one[i][7] = int(one[i][7])
-        one[i].append([])
-        st = prestime + datetime.timedelta(seconds=one[i][6])
-        et = st + datetime.timedelta(seconds=one[i][5])
-        xw = (st - et).seconds  #相位绿灯时长  ps：原数据中的GREEN为加上黄灯3s后的有效绿灯时长
-        one[i][8].append(copy.deepcopy([st, et]))
-        while et < etime:   #该相位绿灯时间段填充
-            st += datetime.timedelta(seconds=(one[i][7] - one[i][5]))
-            et = st + datetime.timedelta(seconds=one[i][5])
-            one[i][8].append(copy.deepcopy([st, et]))
-        while one[i][8][0][0] > prestime + datetime.timedelta(seconds=(one[i][7] - one[i][5])):
-            et = one[i][8][0][0] - datetime.timedelta(seconds=(one[i][7] - one[i][5]))
-            st = et - datetime.timedelta(seconds=one[i][5])
-            one[i][8].insert(0, copy.deepcopy([st, et]))
     return one
-
 
 #给目标车道搜寻可通行绿灯时间
 def get_green2(ssa,lane):
     pipi=comom_num(lane,'啦')[2]  #是否混合车道
     p=[]
     for i in range(len(ssa)):
-        p.append(ssa[i][0])
-    green_sp = [[prestime, etime]] # TODO
-    if pipi==1:  #否
-        for i in range(len(ssa)):
-            p = comom_num(lane, ssa[i][0])
-            lala = p[0]
-            if lala > 0:
-                green_sp = copy.deepcopy(ssa[i][1])
-    elif pipi>1:
-        temp=[]
-        for i in range(len(ssa)):
-            p = comom_num(lane, ssa[i][0])
-            lala = p[0]
-            if lala > 0:
-                for k in range(len(ssa[i][1])):
-                    temp.append(copy.deepcopy(ssa[i][1][k]))
-        temp=np.array(list(set([tuple(t) for t in temp])))
-        temp=temp.tolist()
-        green_sp = temp
+        p.append(ssa[i])
+    #if pipi==1:  #否
+    green_sp=ssa[0]
+    for i in range(len(ssa)):
+        p = comom_num(lane, ssa[i][0])
+        lala = p[0]
+        if lala > 0:
+            green_sp = ssa[i]
     return green_sp
 
 #获取有向路段list——0路名、1长度、2发车集合、3停车场集合、4速密参数、5拓宽车道长度[w,s]、6车道集合[车道方向，是否放行，行驶集合，路口排队集合，容量剩余，可通行时间]、7[cdz,ht]
@@ -167,12 +131,10 @@ def get_road(roadname_list,trip_data,signal_plan,roaddata_path):
         right=''  #ssa
         for j in range(len(signal_plan)):
             if roadname_list[i]==signal_plan[j][3]:
-                temp=[]
-                temp.append(signal_plan[j][4])  #转向
-                temp.append(signal_plan[j][8])  #绿灯区间
-                ssa.append(temp)
+
+                ssa.append(signal_plan[j])
         for j in range(len(ssa)):
-            right+=ssa[j][0]  #ssa表转向
+            right+=ssa[j][4]  #ssa表转向
         lane_leng=res[0][4]
         o_lane=[]
         lr=''  #sigbaslane
@@ -208,7 +170,7 @@ def get_road(roadname_list,trip_data,signal_plan,roaddata_path):
         ht=[2 for x in range(len(lane))]
         LANE=[]
         LANE.append(roadname_list[i])  #路名
-        LANE.append(int(float(lane_leng)))  # 车道长度
+        LANE.append(int(lane_leng))  # 车道长度
         LANE.append([])         # 待发车集合
         LANE.append([])         # 停车场集合
         LANE.append([1,1])      # 速密关系式
@@ -226,10 +188,10 @@ def get_road(roadname_list,trip_data,signal_plan,roaddata_path):
             temp.append([])           # 交叉口排队车辆集合
             temp.append(copy.copy(lane_leng))  # 容量剩余
             if 'nosig' in lane[j]:
-                temp.append([[prestime,etime]])
+                temp.append([0,2,2])
             else:
                 pass_time = get_green2(ssa,lane[j])
-                temp.append(pass_time)  # 可通行时间
+                temp.append([pass_time[6], pass_time[5], pass_time[7]])  # 可通行时间
             t.append(temp)
         LANE.append(t)
         for j in range(len(trip_data)):
@@ -474,11 +436,8 @@ def laneToJson(lane, ht):
     if direction=='右转nosig':
         direction='右'
     direction = directions_list.index(direction)
-    can_pass = []
-    for p in lane[5]:
-        can_pass.append(int((p[0]-stime).total_seconds()))
-        can_pass.append(int((p[1]-stime).total_seconds())+1)
-    return {'direction':direction, 'signals':can_pass, 'ht':ht}
+
+    return {'direction':direction, 'signals':lane[5], 'ht':ht}
 def roadToJson(road):
     index = roadname_list.index(road[0])
     length = road[1]
@@ -505,7 +464,7 @@ def pre_process():
     roads = []
     for r in Road:
         roads.append(roadToJson(r))
-    f=open('./data/dataset_futian.json', 'w')
+    f=open('.\\dataset.json', 'w')
     f.write(json.dumps(roads))
     f.close()
 
@@ -514,7 +473,7 @@ def post_process():
     trip_data=get_tripdata(tripdata_path)
     signal_plan = get_sigalplan(signaldata_path,prestime,etime)
     Road = get_road(roadname_list, trip_data, signal_plan,roaddata_path)
-    output_path = "./out.json"
+    output_path = ".\\out.json"
     output_file = open(output_path)
     output = json.load(output_file)
     total = []
@@ -536,10 +495,9 @@ def post_process():
             record["QUEUESJ"]="num"
             record["QUEUEFREQUE"] = "num"
         total.append(record)
-    f=open('./final_out.json', 'w')
+    f=open('.\\final_out.json', 'w')
     f.write(json.dumps(total, indent=4, separators=(',', ': ')))
     f.close()
 
 if __name__ =='__main__':
-    # post_process()
     pre_process()

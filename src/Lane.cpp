@@ -26,14 +26,10 @@ void Lane::pop_queue_front()
 }
 
 bool Lane::set_signal(int t){
-    if(!signals.empty() && signals.front()==t){
-        signals.pop_front();
-        //toggle can pass
-        can_pass=1-can_pass;
-        if(can_pass==0)
-            return true;
-    }
-    return false;
+    int new_sig = (t%signals[2]) >=signals[0] && (t%signals[2]) <= signals[1];
+    bool change = new_sig==0 && can_pass==1;
+    can_pass=new_sig;
+    return change;
 }
 
     void Lane::count_cool_down(){

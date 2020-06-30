@@ -24,7 +24,7 @@ public:
     std::list<Vehicle *> parks;
 
     int can_pass=0;
-    std::list<int> signals;
+    std::vector<int> signals;
     Lane(int index, int index_in_road, float length, int road_index, int max, Direction direction, int ht);
     void push(Vehicle *v);
     void pop_queue_front();
