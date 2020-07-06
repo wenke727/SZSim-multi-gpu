@@ -21,6 +21,7 @@ public:
 
     std::vector<Road*> roads;
     std::vector<Lane*> lanes;
+    std::vector<Vehicle*> vehicles;
 
     //All the parameters for all roads in GPU computing. The parameters are precalculated once before the simulation.
     float *v_max;          // Max speed in unit of m/s

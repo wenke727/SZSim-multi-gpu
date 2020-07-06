@@ -4,12 +4,17 @@
 #include <iomanip>
 #include <iostream>
 #include <chrono>
+#include <algorithm>    // std::sort
 #include "../nlohmann/json.hpp"
 
 using json = nlohmann::json;
 
 bool vehicle_comp(const Vehicle* first, const Vehicle* second){
 	return first->time < second->time;
+}
+
+bool vehicle_comp_index(const Vehicle* first, const Vehicle* second){
+	return first->index < second->index;
 }
 
 
@@ -38,12 +43,17 @@ void initialize_roads(Model* model, json j)
         for (json::iterator it_v = (*it)["vehicles"].begin(); it_v != (*it)["vehicles"].end(); ++it_v)
         {
             Vehicle *v = new Vehicle((*it_v)["time"].get<int>());
-            v->index = v_index++;
+            if((*it_v)["index"]!=nullptr)
+                v->index=(*it_v)["index"].get<int>();
+            else
+                v->index = v_index++;
             for (json::iterator it_r = (*it_v)["roads"].begin(); it_r != (*it_v)["roads"].end(); ++it_r)
                 v->roads.push_back((*it_r).get<int>());
             for (json::iterator it_d = (*it_v)["directions"].begin(); it_d != (*it_v)["directions"].end(); ++it_d)
                 v->directions.push_back((*it_d).get<int>());
             road->vehicles_to_load.push_back(v);
+
+            model->vehicles.push_back(v);
         }
         road->vehicles_to_load.sort(vehicle_comp);
         road->vehicle_load_itr=road->vehicles_to_load.begin();
@@ -51,6 +61,7 @@ void initialize_roads(Model* model, json j)
     }
     model->n_road = model->roads.size();
     model->n_lane = model->lanes.size();
+    std::sort(model->vehicles.begin(), model->vehicles.end(), vehicle_comp_index);
 }
 
 Model::Model(std::string filename, float dt, float t_end, float car_length, float car_distance, float v_max_global, float v_min_global) : dt(dt), t_end(t_end), car_length(car_length), car_distance(car_distance), v_max_global(v_max_global), v_min_global(v_min_global)
@@ -151,7 +162,7 @@ void Model::release_vehicles(Lane *lane, int t)
         else
         {
             std::vector<Lane *> lanes = roads[v->roads[v->roadIndex]]->lanes_per_direction[v->directions[v->roadIndex]];
-            Lane *min_lane = nullptr;
+            Lane *min_lane = roads[v->roads[v->roadIndex]]->lanes[0];
             int min = 99999;
             for (int i = 0; i < lanes.size(); i++)
             {

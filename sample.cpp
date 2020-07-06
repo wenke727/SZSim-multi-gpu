@@ -7,7 +7,7 @@ int main(int argc, char** argv){
     std::string filename(argv[1]);
     std::string output_file(argv[2]);
     int dt=1;
-    int t_end=60*60;
+    int t_end=60*240;
     float car_length=5;
     float car_distance=0.6;
     float v_max_global=60.0/3.6;
